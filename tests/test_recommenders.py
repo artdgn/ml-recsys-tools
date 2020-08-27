@@ -238,58 +238,6 @@ class TestRecommendersBasic(TestCaseWithState):
                 self.assertTrue(all(deviations < 0.01))
 
 
-    def test_b_3_lfm_early_stop(self):
-        lfm_rec = deepcopy(self.state.lfm_rec)
-        lfm_rec.fit(self.state.train_obs, epochs=1)
-        prev_epochs = lfm_rec.fit_params['epochs']
-
-        lfm_rec.fit_with_early_stop(
-            self.state.train_obs,
-            epochs_max=5, epochs_step=5, stop_patience=1,
-            valid_ratio=0.2, metric=self.metric, k=self.k,
-            refit_on_all=False, plot_convergence=False)
-
-        sut_epochs = lfm_rec.fit_params['epochs']
-
-        # check that epochs parameter changed
-        self.assertNotEqual(prev_epochs, sut_epochs)
-
-        # check that in the report dataframe the maximum metric value is for our new epoch number
-        self.assertEqual(lfm_rec.early_stop_metrics_df[self.metric].idxmax(), sut_epochs)
-
-    def test_b_4_lfm_hp_search(self):
-        lfm_rec = deepcopy(self.state.lfm_rec)
-        space = lfm_rec.guess_search_space()
-        n_iters = 4
-        hp_space = dict(
-            no_components=space.Integer(10, 40),
-            epochs=space.Integer(5, 20),
-            item_alpha=space.Real(1e-8, 1e-5, prior='log-uniform')
-        )
-        hp_results = lfm_rec.hyper_param_search(
-            self.state.train_obs,
-            metric=self.metric,
-            k=self.k,
-            plot_graph=False,
-            hp_space=hp_space,
-            n_iters=n_iters,
-        )
-
-        # check that best model works
-        self._test_recommender(hp_results.best_model)
-
-        # check that hp space and params have same keys
-        best_params = hp_results.best_params
-        self.assertListEqual(sorted(best_params.keys()), sorted(hp_space.keys()))
-
-        # check report format
-        rep = hp_results.report
-        self.assertEqual(len(rep), n_iters)
-
-        # check that best values in report are best values for best params
-        best_params_sut = rep.loc[rep['target_loss'].idxmin()][best_params.keys()].to_dict()
-        self.assertDictEqual(best_params_sut, best_params)
-
     def test_c_cooc_recommender(self):
         from ml_recsys_tools.recommenders.cooccurrence_recommenders import ItemCoocRecommender
 
@@ -321,18 +269,6 @@ class TestRecommendersBasic(TestCaseWithState):
         self._test_get_recommendations(cos_rec)
         self._test_get_similar_items(cos_rec)
         self._test_predict_for_user(cos_rec)
-
-    def test_c_spotlight_implicit_recommender(self):
-        from ml_recsys_tools.recommenders.spotlight_recommenders import EmbeddingFactorsRecommender
-
-        rec = EmbeddingFactorsRecommender()
-        # trying to balance flakiness and speed
-        rec.set_params(embedding_dim=32, batch_size=1<<10,
-                       num_negative_samples=10, n_iter=5)
-        rec.fit(self.state.train_obs)
-        report = rec.eval_on_test_by_ranking(self.state.test_obs, prefix='spot ')
-        logger.info(report)
-        self._test_recommender(rec)
 
     def test_d_comb_rank_ens(self):
         from ml_recsys_tools.recommenders.combination_ensembles import CombinedRankEnsemble
