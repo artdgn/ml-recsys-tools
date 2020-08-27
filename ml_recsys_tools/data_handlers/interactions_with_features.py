@@ -6,7 +6,7 @@ from sklearn.cluster import MiniBatchKMeans
 import scipy.sparse as sp
 
 from sklearn.preprocessing import LabelBinarizer, normalize, LabelEncoder
-# from sklearn_pandas import DataFrameMapper, FunctionTransformer
+from sklearn_pandas import DataFrameMapper
 
 from ml_recsys_tools.utils.sklearn_extenstions import NumericBinningBinarizer
 

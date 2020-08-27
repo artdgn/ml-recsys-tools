@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 from os import path
 
-version = '0.8.2'
+version = '0.9'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -15,8 +15,8 @@ setup(
     description='Tools for recommendation systems development',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/DomainGroupOSS/ml-recsys-tools',
-    author='Domain group (Arthur Deygin)',
+    url='https://github.com/artdgn/ml-recsys-tools',
+    author='Arthur Deygin',
     author_email='arthurdgn@gmail.com',
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -28,9 +28,7 @@ setup(
     keywords='recommendations machine learning',
     packages=find_packages(exclude=['tests', 'examples']),
     install_requires=['requests', 'numpy', 'scipy', 'pandas',
-                      'scikit_learn', 'lightfm', 'implicit', 'psutil',
-                      'scikit_optimize', 'gmaps', 'boto3', 'redis', 'asyncpg',
-                      'sklearn_pandas', 'matplotlib'],
+                      'scikit_learn', 'lightfm', 'psutil', 'matplotlib'],
 )
 
 ## rm -rf dist && python3 setup.py sdist bdist_wheel && twine upload dist/*
