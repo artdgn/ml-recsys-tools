@@ -8,18 +8,12 @@ import numpy as np
 import pandas as pd
 from scipy.stats import rankdata
 
-import pickle
-
-import time
-
 from ml_recsys_tools.utils.logger import simple_logger as logger
-from ml_recsys_tools.utils.automl import BayesSearchHoldOut, SearchSpaceGuess
 from ml_recsys_tools.utils.instrumentation import LogCallsTimeAndOutput
 from ml_recsys_tools.utils.parallelism import map_batches_multiproc
 from ml_recsys_tools.utils.similarity import top_N_sorted
 
-from ml_recsys_tools.data_handlers.interaction_handlers_base import InteractionMatrixBuilder, RANDOM_STATE, \
-    ObservationsDF
+from ml_recsys_tools.data_handlers.interaction_handlers_base import InteractionMatrixBuilder, ObservationsDF
 from ml_recsys_tools.data_handlers.interactions_with_features import ItemsHandler
 
 from ml_recsys_tools.evaluation.ranks_scoring import mean_scores_report_on_ranks
@@ -51,12 +45,6 @@ class BaseDFRecommender(ABC, LogCallsTimeAndOutput):
         method for removing any data to reduce memory for serving (gradients etc..)
         """
         pass
-
-    @classmethod
-    def guess_search_space(cls):
-        return SearchSpaceGuess(cls).\
-            set_from_dict(cls.default_model_params).\
-            set_from_dict(cls.default_fit_params)
 
     @staticmethod
     def toggle_mkl_blas_1_thread(state):
@@ -212,39 +200,6 @@ class BaseDFRecommender(ABC, LogCallsTimeAndOutput):
 
         else:
             raise NotImplementedError('results_format: ' + results_format)
-
-    def hyper_param_search_on_split_data(
-            self, train_data, validation_data, hp_space,
-            n_iters=100, random_search=0.9, **kwargs):
-
-        return RecoBayesSearchHoldOut(
-                search_space=hp_space,
-                pipeline=self,
-                loss=None,
-                random_ratio=random_search,
-                **kwargs).\
-            optimize(
-                train_data=train_data,
-                validation_data=validation_data,
-                n_calls=n_iters)
-
-    def pickle(self, filepath):
-        with open(filepath, 'wb') as f:
-            pickle.dump(self, f)
-
-    def hyper_param_search(self, train_obs, hp_space, n_iters=100,
-                           valid_ratio=0.04, random_search=0.9,
-                           valid_split_time_col=None, **kwargs):
-
-        train_obs_bo, valid_obs_bo = train_obs.split_train_test(
-            ratio=valid_ratio ** 0.5 if valid_split_time_col is None else valid_ratio,
-            users_ratio=valid_ratio ** 0.5 if valid_split_time_col is None else 1,
-            time_split_column=valid_split_time_col,
-            random_state=RANDOM_STATE)
-
-        return self.hyper_param_search_on_split_data(
-            train_data=train_obs_bo, validation_data=valid_obs_bo.df_obs,
-            hp_space=hp_space, n_iters=n_iters, random_search=random_search, **kwargs)
 
 
 class BaseDFSparseRecommender(BaseDFRecommender):
@@ -737,20 +692,3 @@ class BasePredictorRecommender(BaseDFSparseRecommender):
             return report_df, full_metrics
         else:
             return report_df
-
-class RecoBayesSearchHoldOut(BayesSearchHoldOut, LogCallsTimeAndOutput):
-
-    def __init__(self, metric='AUC', k=10, **kwargs):
-        self.metric = metric
-        self.k = k
-        super().__init__(**kwargs)
-
-    def _fit_predict_loss(self, pipeline):
-        start = time.time()
-        pipeline.fit(self.train_data)
-        report_df = pipeline.eval_on_test_by_ranking(
-            self.validation_data, include_train=False, prefix='', k=self.k)
-        loss = 1 - float(report_df.loc['test', self.metric])
-        return loss, self._add_loss_and_time_to_report(
-            loss, time.time() - start, report_df=report_df)
-
