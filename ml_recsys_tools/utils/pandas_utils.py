@@ -1,5 +1,5 @@
 import pandas as pd
-from pandas.compat import StringIO
+from io import StringIO
 from sklearn.metrics.classification import classification_report
 import warnings
 from functools import partial

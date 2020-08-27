@@ -260,5 +260,24 @@ class BaseFactorizationRecommender(BasePredictorRecommender):
 
         return full_pred_mat
 
+    def _predict_for_items_dense_direct(self, items_ids_source, item_ids_target=None):
+        """ dense similarity predictions from items to items """
+        item_inds_s = self.item_inds(items_ids_source)
+        item_inds_t = self.item_inds(item_ids_target)
+
+        item_biases, item_factors = self._get_item_factors()
+
+        scores = np.dot(item_factors[item_inds_s, :], item_factors[item_inds_t, :].T)
+
+        if item_biases is not None:
+            scores = (scores.T + item_biases[item_inds_s]).T
+            scores += item_biases[item_inds_t]
+
+        if sp.issparse(scores):
+            scores = scores.toarray()
+        else:
+            scores = np.array(scores)
+        return scores
+
 
 
