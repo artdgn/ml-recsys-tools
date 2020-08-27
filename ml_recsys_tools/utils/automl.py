@@ -14,7 +14,7 @@ from matplotlib import pyplot
 from sklearn.feature_selection import mutual_info_regression
 
 from sklearn.metrics import recall_score, precision_score, f1_score
-from sklearn.ensemble.voting_classifier import VotingClassifier
+from sklearn.ensemble import VotingClassifier
 
 from sklearn.preprocessing import LabelEncoder
 from skopt import Optimizer
@@ -260,8 +260,8 @@ class BayesSearchHoldOut(LogCallsTimeAndOutput):
         return SimpleNamespace(**{
             'optimizer': self,
             'report': self.best_results_summary(),
-            'mutual_info_loss': self.params_mutual_info(),
-            'mutual_info_time': self.params_mutual_info(self.time_taken_col),
+            # 'mutual_info_loss': self.params_mutual_info(),
+            # 'mutual_info_time': self.params_mutual_info(self.time_taken_col),
             'result': result,
             'best_params': best_params,
             'best_model': best_model})

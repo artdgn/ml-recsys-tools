@@ -6,7 +6,7 @@ import scipy.sparse as sp
 import sklearn.preprocessing
 from sklearn.utils import column_or_1d
 from sklearn.utils.validation import check_is_fitted
-from pandas.core.algorithms import _get_data_algo, _hashtables, ensure_object
+from pandas.core.algorithms import _get_data_algo, ensure_object
 import importlib
 
 pd_cat_module = importlib.import_module(pd.Categorical.__module__)
@@ -34,8 +34,8 @@ class PDLabelEncoder(sklearn.preprocessing.LabelEncoder):
             values = ensure_object(values)
             categories = ensure_object(categories)
 
-        (hash_klass, vec_klass), vals = _get_data_algo(values, _hashtables)
-        (_, _), cats = _get_data_algo(categories, _hashtables)
+        hash_klass, vals = _get_data_algo(values)
+        _, cats = _get_data_algo(categories)
         t = hash_klass(len(cats))
         t.map_locations(cats)
         return t
