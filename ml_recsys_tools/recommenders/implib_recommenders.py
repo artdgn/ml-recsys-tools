@@ -60,23 +60,6 @@ class ALSRecommender(BaseFactorizationRecommender):
             self.model.fit(self.implib_train_mat)
         return self
 
-    def fit_batches(self, train_obs, train_dfs, epochs_per_batch=None, **fit_params):
-        self._prep_for_fit(train_obs)
-        for i, df in enumerate(train_dfs):
-            batch_train_mat = self.sparse_mat_builder.build_sparse_interaction_matrix(df)
-
-            if epochs_per_batch is not None:
-                fit_params['iterations'] = epochs_per_batch
-            else:
-                fit_params['iterations'] = 1
-                self.model.cg_steps = 1
-            self._set_fit_params(fit_params)
-
-            self._set_implib_train_mat(batch_train_mat)
-
-            logger.info('Fitting batch %d (%d interactions)' % (i, len(df)))
-            self.model.fit(self.implib_train_mat)
-
     def _set_epochs(self, epochs):
         self.set_params(iterations=epochs)
         if self.model is not None:

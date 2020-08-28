@@ -1,5 +1,5 @@
 import warnings
-from abc import abstractmethod, ABC
+from abc import abstractmethod
 from functools import partial
 from itertools import repeat
 from multiprocessing import Process, Queue
@@ -8,12 +8,10 @@ from queue import PriorityQueue
 from threading import Thread
 
 import numpy as np
-import pandas as pd
 import scipy.stats
 
 from ml_recsys_tools.recommenders.recommender_base import BaseDFSparseRecommender
 from ml_recsys_tools.utils.parallelism import N_CPUS
-
 
 RANK_COMBINATION_FUNCS = {
     'mean': np.mean,

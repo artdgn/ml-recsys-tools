@@ -43,15 +43,11 @@ class LightFMRecommender(BaseFactorizationRecommender):
                  use_sample_weight=False,
                  external_features=None,
                  external_features_params=None,
-                 initialiser_model=None,
-                 initialiser_scale=0.1,
                  **kwargs):
         self.use_sample_weight = use_sample_weight
         self.external_features = external_features
         self.external_features_params = external_features_params or \
                                         self.default_external_features_params.copy()
-        self.initialiser_model = initialiser_model
-        self.initialiser_scale = initialiser_scale
         super().__init__(**kwargs)
 
     def _prep_for_fit(self, train_obs, **fit_params):
@@ -64,26 +60,6 @@ class LightFMRecommender(BaseFactorizationRecommender):
         self._add_external_features()
         # init model and set params
         self.model = LightFM(**self.model_params)
-        if self.initialiser_model is not None:
-            self._initialise_from_model(train_obs)
-
-    def _initialise_from_model(self, train_obs):
-        # fit initialiser model (this is done here to prevent any data leaks from passing fitted models)
-        logger.info('Training %s model to initialise LightFM model.' % str(self.initialiser_model))
-        self.initialiser_model.fit(train_obs)
-        self._reuse_data(self.initialiser_model)
-        # have the internals initialised
-        self.model.fit_partial(self.train_mat, epochs=0)
-
-        # transplant factors from inititialiser model
-        self.model.item_embeddings = self.initialiser_model._get_item_factors()[1]
-        self.model.user_embeddings = self.initialiser_model._get_user_factors()[1]
-
-        # scale the factors to be of similar scale
-        scale = self.initialiser_scale
-        self.model.item_embeddings *= scale / np.mean(np.abs(self.model.item_embeddings))
-        self.model.user_embeddings *= scale / np.mean(np.abs(self.model.user_embeddings))
-
 
     def _add_external_features(self):
         if self.external_features is not None:
@@ -113,29 +89,12 @@ class LightFMRecommender(BaseFactorizationRecommender):
             self.model.fit_partial(self.train_mat)
         return self
 
-    def fit_batches(self, train_obs, train_dfs, epochs_per_batch=None, **fit_params):
-        self._prep_for_fit(train_obs)
-        for i, df in enumerate(train_dfs):
-            batch_train_mat = self.sparse_mat_builder.build_sparse_interaction_matrix(df)
-
-            if epochs_per_batch is not None:
-                fit_params['epochs'] = epochs_per_batch
-
-            fit_params['sample_weight'] = batch_train_mat.tocoo() \
-                if self.use_sample_weight else None
-
-            self._set_fit_params(fit_params)
-
-            logger.info('Fitting batch %d (%d interactions)' % (i, len(df)))
-            self.model.fit_partial(batch_train_mat, **self.fit_params)
-
     def _set_epochs(self, epochs):
         self.set_params(epochs=epochs)
 
     def set_params(self, **params):
         params = self._pop_set_params(
-            params, ['use_sample_weight', 'external_features', 'external_features_params',
-                     'initialiser_model', 'initialiser_scale'])
+            params, ['use_sample_weight', 'external_features', 'external_features_params'])
         super().set_params(**params)
 
     def _get_item_factors(self, mode=None):

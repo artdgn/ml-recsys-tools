@@ -464,7 +464,6 @@ class BaseDFSparseRecommender(BaseDFRecommender):
         ranks_all_test = pred_mat_builder.predictions_df_to_sparse_ranks(
             recos_flat_test)
 
-        # @self.logging_decorator
         def _get_training_ranks():
             users_inds = mat_builder.uid_encoder.transform(users)
             users_inds.sort()
@@ -477,7 +476,6 @@ class BaseDFSparseRecommender(BaseDFRecommender):
                 sp_train, pred_mat_builder.predictions_df_to_sparse_ranks(recos_flat_train))
             return sp_train_ranks, sp_train
 
-        # @self.logging_decorator
         def _get_test_ranks(test_df):
             sp_test = self.sparse_mat_builder. \
                 build_sparse_interaction_matrix(test_df).tocsr()
@@ -661,7 +659,6 @@ class BasePredictorRecommender(BaseDFSparseRecommender):
             if isinstance(test_dfs[i], ObservationsDF):
                 test_dfs[i] = test_dfs[i].df_obs
 
-        # @self.logging_decorator
         def _get_training_ranks():
             all_test_users = np.unique(np.concatenate(
                 [df[self._user_col].unique() for df in test_dfs]))
@@ -673,7 +670,6 @@ class BasePredictorRecommender(BaseDFSparseRecommender):
             ranks_mat = self._predict_rank(sub_train_mat)
             return ranks_mat, sub_train_mat
 
-        # @self.logging_decorator
         def _get_test_ranks(test_df):
             test_sparse = self.sparse_mat_builder.\
                 build_sparse_interaction_matrix(test_df)

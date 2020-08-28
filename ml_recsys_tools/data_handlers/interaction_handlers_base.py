@@ -60,10 +60,6 @@ class ObservationsDF(LogLongCallsMeta):
     def ratings(self):
         return self.df_obs[self.rating_col].values
 
-    @property
-    def timestamps(self):
-        return self.df_obs[self.timestamp_col].values
-
     def _check_duplicated_interactions(self):
         dups = self.df_obs.duplicated([self.uid_col, self.iid_col])
         if dups.sum():
@@ -203,16 +199,6 @@ class ObservationsDF(LogLongCallsMeta):
         other.df_obs = df_filtered
         return other
 
-    def users_filtered_df_obs(self, users):
-        if isinstance(users, str):
-            users = [users]
-        return self.df_obs[self.df_obs[self.uid_col].isin(users)]
-
-    def items_filtered_df_obs(self, items):
-        if isinstance(items, str):
-            items = [items]
-        return self.df_obs[self.df_obs[self.iid_col].isin(items)]
-
     @staticmethod
     def time_filter_on_df(df, time_col, days_delta_tuple):
         time_max = pd.Timestamp(df[time_col].max()) - pd.Timedelta(days=min(days_delta_tuple))
@@ -292,8 +278,6 @@ class ObservationsDF(LogLongCallsMeta):
 
         return train_other, test_other
 
-    split_by_time_col = split_train_test_by_time  # backwards compat
-
     def split_train_test(self, ratio=0.2, users_ratio=1.0, time_split_column=None,
                          random_state=None):
         """
@@ -323,18 +307,6 @@ class ObservationsDF(LogLongCallsMeta):
         test_other.df_obs = df_test
 
         return train_other, test_other
-
-    def generate_time_batches(self, n_batches, time_col, days_delta=1):
-        remaining = copy.deepcopy(self)
-        inf_days = 10000  # just lots of days
-        for i in reversed(range(n_batches)):
-            # this is done so that the earliest batch contains all
-            # the data that's not in later batches
-            delta = days_delta if i < (n_batches - 1) else inf_days
-
-            remaining, batch_obs = remaining.split_train_test_by_time(
-                time_col, days_delta_tuple=(i * days_delta, i * days_delta + delta))
-            yield batch_obs.df_obs
 
 
 def train_test_split_by_col(df, col_ratio=0.2, test_ratio=0.2, col_name='userid',

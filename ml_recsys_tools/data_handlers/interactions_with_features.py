@@ -257,9 +257,6 @@ class ItemsHandler(LogLongCallsMeta):
     def __repr__(self):
         return super().__repr__() + ', %d Items' % len(self.df_items)
 
-    def items_filtered_by_ids(self, item_ids):
-        return self.df_items[self.df_items[self.item_id_col].isin(item_ids)]
-
     def get_item_features(self,
                           categorical_unique_ratio=0.05,
                           categorical_n_unique=20,
@@ -355,12 +352,6 @@ class ObsWithFeatures(ObservationsDF, ItemsHandler):
         other._filter_relevant_obs_and_items(stage='remove_interactions_by_df')
         return other
 
-    def get_items_df_for_user(self, user):
-        item_ids = self.users_filtered_df_obs(user)[self.iid_col].unique().tolist()
-        df_items_view = self.items_filtered_by_ids(item_ids)
-        return df_items_view
-
-
 
 class ObsWithGeoFeatures(ObsWithFeatures):
 
@@ -404,18 +395,6 @@ class ObsWithGeoFeatures(ObsWithFeatures):
                    (self.df_items[self.long_col].values >= min_long)
 
         return self._apply_filter(geo_filt)
-
-    def filter_by_location_circle(self, center_lat, center_long, degree_dist):
-
-        geo_filt = ((self.df_items[self.lat_col].values - center_lat) ** 2 +
-                    (self.df_items[self.long_col].values - center_long) ** 2) <= degree_dist
-
-        return self._apply_filter(geo_filt)
-
-    def filter_by_location_square(self, center_lat, center_long, degree_side):
-        offset = degree_side / 2
-        return self.filter_by_location_range(
-            center_lat - offset, center_lat + offset, center_long - offset, center_long + offset)
 
     def filter_by_location_rectangle(self, center_lat, center_long, lat_side, long_side):
         offset_lat = lat_side / 2
