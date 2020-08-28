@@ -14,17 +14,18 @@ kiwisolver==1.2.0         # via matplotlib
 lightfm==1.15             # via -r requirements.in
 lightgbm==2.3.1           # via -r requirements.in
 matplotlib==3.3.1         # via -r requirements.in
-numpy==1.19.1             # via -r requirements.in, implicit, lightfm, lightgbm, matplotlib, pandas, scikit-learn, scipy
-pandas==1.1.1             # via -r requirements.in
+numpy==1.19.1             # via -r requirements.in, implicit, lightfm, lightgbm, matplotlib, pandas, scikit-learn, scipy, sklearn-pandas
+pandas==1.1.1             # via -r requirements.in, sklearn-pandas
 pillow==7.2.0             # via matplotlib
 psutil==5.7.2             # via -r requirements.in
 pyparsing==2.4.7          # via matplotlib
 python-dateutil==2.8.1    # via matplotlib, pandas
 pytz==2020.1              # via pandas
 requests==2.24.0          # via -r requirements.in, lightfm
-scikit-learn==0.23.2      # via -r requirements.in, lightgbm
-scipy==1.5.2              # via -r requirements.in, implicit, lightfm, lightgbm, scikit-learn
+scikit-learn==0.23.2      # via -r requirements.in, lightgbm, sklearn-pandas
+scipy==1.5.2              # via -r requirements.in, implicit, lightfm, lightgbm, scikit-learn, sklearn-pandas
 six==1.15.0               # via cycler, python-dateutil
+sklearn-pandas==2.0.0     # via -r requirements.in
 threadpoolctl==2.1.0      # via scikit-learn
 tqdm==4.48.2              # via implicit
 urllib3==1.25.10          # via requests
