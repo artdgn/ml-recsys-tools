@@ -1,105 +1,117 @@
 import logging
 import functools
-import os
 import pickle
 import time
 import inspect
 from types import FunctionType
-from abc import ABC, ABCMeta
+from abc import ABCMeta
 from threading import Thread
 
-import atexit
 from psutil import virtual_memory, cpu_percent
 
-from ml_recsys_tools.utils.logger import simple_logger
+from ml_recsys_tools.utils import logging_config
+
+logging_config.config()
+
+logger = logging.getLogger(__name__)
 
 
-class LoggingVerbosity:
-    def __init__(self, verbose=True, min_time=1):
-        """
-        :param verbose: true or false - whether to print to logging.INFO
-        :param min_time: minimum time for which to print, if function call is shorter - nothing is printed
-        """
-        self.verbose = verbose
-        self.min_time = min_time
+class Config:
+    """
+    Set "use_instrumentation" in some common context
+    in order to disable decoration logging.
 
-    @property
-    def level(self):
-        return logging.INFO if self.verbose else logging.DEBUG
-
-
-LOGGING_VERBOSITY = LoggingVerbosity()
+    I usually leave this on all the time as the profiling is quite
+    light weight when not used on very frequently running
+    functions (functionality to prevent this is provided below),
+    and this also serves as a nice progress indicator to
+    know what long-running code is doing at any time.
+    """
+    use_instrumentation = True
+    min_time_seconds = 1
+    level = logging.INFO
 
 
 def variable_info(result):
+    """
+    Create a string that gives some useful information about an output of a function.
+    :param result: anything
+    :return: string with some useful information about the result.
+    """
     if hasattr(result, 'shape'):
         shape_str = 'shape: %s' % str(result.shape)
     elif isinstance(result, tuple) and len(result) <= 3:
         shape_str = 'tuple: (' + ','.join([variable_info(el) for el in result]) + ')'
     elif hasattr(result, '__len__'):
         shape_str = 'len: %s' % str(len(result))
+    elif hasattr(result, '__dict__'):
+        shape_str = 'keys: %s' % str(len(result.__dict__.keys()))
     else:
-        shape_str = str(result)[:50] + '...'
+        result_str = str(result)
+        shape_str = result_str if len(result_str) <= 50 else (str(result)[:50] + '...')
 
-    ret_str = str(type(result)) + ', ' + shape_str
-    return ret_str
+    return str(type(result)) + ', ' + shape_str
 
 
 def log_time_and_shape(fn):
-    @functools.wraps(fn)
-    def inner(*args, **kwargs):
-        sys_monitor = ResourceMonitor().start()
-
-        start = time.time()
-
-        result = fn(*args, **kwargs)
-
-        elapsed = time.time() - start
-
-        sys_monitor.stop()
-
-        if elapsed >= LOGGING_VERBOSITY.min_time:
-            msg = ' ' * get_stack_depth() + \
-                  f'{function_name_with_class(fn)}, elapsed: {elapsed:.2f}, ' \
-                  f'returned: {variable_info(result)}, sys mem: {sys_monitor.current_memory}%' \
-                  f'(peak:{sys_monitor.peak_memory}%) cpu:{int(sys_monitor.avg_cpu_load)}%'
-
-            simple_logger.log(LOGGING_VERBOSITY.level, msg)
-
-        return result
-
-    return inner
-
-
-def timer_deco(fn):
-    log_format = 'function %s: %s s'
+    """
+    Decorates the function to log it's run time, resource usage (CPU and memory),
+    and output shape / info.
+    The logging statements are indented according to the stack depth in order to have a
+    visual representation of depth.
+    :param fn: function to be decorated.
+    :return: decorated function.
+    """
 
     @functools.wraps(fn)
     def inner(*args, **kwargs):
-        start = time.time()
-        result = fn(*args, **kwargs)
-        duration = time.time() - start
-        simple_logger.log(LOGGING_VERBOSITY.level, log_format,
-                          fn.__name__, duration)
+        with ResourceMonitor() as monitor:
+            result = fn(*args, **kwargs)
+
+        if monitor.elapsed >= Config.min_time_seconds:
+            msg = (' ' * get_stack_depth() +
+                   f'{function_name_with_class(fn)}, elapsed: {monitor.elapsed:.2f} sec, '
+                   f'returned: {variable_info(result)}, '
+                   f'sys mem: {monitor.current_memory}%'
+                   f'(peak:{monitor.peak_memory}%) '
+                   f'cpu:{int(monitor.avg_cpu_load)}%'
+                   )
+
+            logger.log(Config.level, msg)
+
         return result
 
-    return inner
+    return inner if Config.use_instrumentation else fn
+
 
 
 class ResourceMonitor:
+    """
+    Class for monitoring the CPU and memory of a function call.
+    """
+
     def __init__(self, interval=0.2):
         self.interval = interval
         self._init_counters()
         self._thread = None
         self._run_condition = False
+        self.elapsed = None
 
     def _init_counters(self):
+        self._start_time = time.time()
         self.current_memory = 0
         self.peak_memory = 0
         self.avg_cpu_load = 0
         self._n_measurements = 0
 
     def __del__(self):
+        self.stop()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, type, value, traceback):
         self.stop()
 
     @staticmethod
@@ -110,7 +122,7 @@ class ResourceMonitor:
             # for some reason there's a KeyError: ('psutil',) in psutil
             return 0, 0
         except Exception as e:
-            simple_logger.exception(e)
+            logger.exception(e)
             return 0, 0
 
     def _measure(self):
@@ -132,12 +144,11 @@ class ResourceMonitor:
             self._thread.join(0)
         self._run_condition = True
         self._thread = Thread(target=self._thread_loop, name='ResourceMonitor')
-        self._thread.daemon = True
         self._thread.start()
-        atexit.register(self.stop)
         return self
 
     def stop(self):
+        self.elapsed = time.time() - self._start_time
         self._run_condition = False
         self._measure()
 
@@ -174,67 +185,13 @@ def get_class_that_defined_method(meth):
     return getattr(meth, '__objclass__', None)  # handle special descriptor objects
 
 
-def collect_named_init_params(cls, skip_empty=True, ignore_classes=(object, ABC)):
-    """
-    a method to get all named params from all classed in this class' MRO
-    can be used to infer the possible search space for hyperparam optimization
-
-    :param skip_empty: whether to skip classes with no named parameters
-    :return: a nested dict of {class-name: dict of {named-init-params: default values}}
-    """
-    params = {}
-    for c in inspect.getmro(cls):
-        if c not in ignore_classes:
-            named_params = [
-                p for p in inspect.signature(c.__init__).parameters.values()
-                if p.name != 'self'
-                   and p.kind != p.VAR_KEYWORD
-                   and p.kind != p.VAR_POSITIONAL]
-
-            if skip_empty and not named_params:
-                continue
-
-            params[c.__name__] = {
-                p.name: p.default
-                if p.default is not p.empty else ''
-                for p in named_params}
-    return params
-
-
-def override_defaults(defaults):
-    def decorator(f):
-        @functools.wraps(f)
-        def wrapper(*args, **kwargs):
-            params = inspect.signature(f).parameters
-
-            new_defaults = [defaults[p] for p in params
-                            if params[p].default is not params[p].empty and p in defaults]
-            old_defaults = [params[p].default for p in params
-                            if params[p].default is not params[p].empty and p in defaults]
-
-            assert f.__defaults__==tuple(old_defaults)
-
-            # Backup original function defaults.
-            original_defaults = f.__defaults__
-
-            # Set the new function defaults.
-            f.__defaults__ = tuple(new_defaults)
-
-            return_value = f(*args, **kwargs)
-
-            # Restore original defaults (required to keep this trick working.)
-            f.__defaults__ = original_defaults
-
-            return return_value
-
-        return wrapper
-
-    return decorator
-
-
-# https://stackoverflow.com/questions/10067262/automatically-decorating-every-instance-method-in-a-class
-# decorate all instance methods (unless excluded) with the same decorator
 def decorate_all_metaclass(decorator):
+    """
+    Decorate all methods and classmethods (unless excluded) with the same decorator.
+
+    altered from https://stackoverflow.com/questions/10067262/automatically-decorating-every-instance-method-in-a-class
+    """
+
     # check if an object should be decorated
     def do_decorate(attr, value):
         return ('__' not in attr and
@@ -260,30 +217,16 @@ def decorate_all_metaclass(decorator):
     return DecorateAll
 
 
-def decorate_all_patch(klass, decorator):
-    for attr, value in klass.__dict__.items():
-        if '__' not in attr and callable(value) and type(value) is not type:
-            if isinstance(value, classmethod):
-                setattr(klass, attr, classmethod(decorator(value.__func__)))
-            else:
-                setattr(klass, attr, decorator(value))
-    return klass
+class LogLongCallsMeta(metaclass=decorate_all_metaclass(log_time_and_shape)):
+    """
+        Class to provide automatic logging decoration of all methods for extending classes.
 
-
-class LogCallsTimeAndOutput(metaclass=decorate_all_metaclass(log_time_and_shape)):
-
-    def __init__(self, verbose=True, **kwargs):
-        self.verbose = verbose
-
-    @property
-    def verbose(self):
-        return self._verbose
-
-    @verbose.setter
-    def verbose(self, verbose):
-        self._verbose = verbose
-        if not self.verbose:
-            self.decorate = False
+        Note on overhead for frequently invoked methods:
+            If your class includes methods that are invoked very frequently,
+            e.g. thousands / millions of times per second, you should use `do_not_decorate`
+            decorator in order to prevent the logging decorator being applied to those methods,
+            since the overhead of monitoring will be substantial in those cases.
+        """
 
     @property
     def logging_decorator(self):
@@ -291,10 +234,7 @@ class LogCallsTimeAndOutput(metaclass=decorate_all_metaclass(log_time_and_shape)
         this is for decorating inner scope functions
         :return: the logging decorator if verbose is True, empty decorator otherwise
         """
-        if self.verbose:
-            return log_time_and_shape
-        else:
-            return lambda f: f
+        return log_time_and_shape
 
     @staticmethod
     def do_not_decorate(f):
@@ -306,16 +246,14 @@ class LogCallsTimeAndOutput(metaclass=decorate_all_metaclass(log_time_and_shape)
         return f
 
 
-def log_errors(logger=None, message=None, return_on_error=None):
+def log_errors(message=None, return_on_error=None):
     def decorator(fn):
         @functools.wraps(fn)
         def inner(*args, **kwargs):
-            nonlocal logger, message, return_on_error
+            nonlocal message, return_on_error
             try:
                 return fn(*args, **kwargs)
             except Exception as e:
-                if logger is None:
-                    logger = simple_logger
                 logger.exception(e)
                 fn_str = function_name_with_class(fn)
                 msg_str = ', Message: %s' % message if message else ''
@@ -323,10 +261,6 @@ def log_errors(logger=None, message=None, return_on_error=None):
                 return return_on_error
         return inner
     return decorator
-
-
-def root_caller_file():
-    return os.path.splitext(os.path.split(inspect.stack()[-1].filename)[1])[0]
 
 
 def pickle_size_mb(obj):

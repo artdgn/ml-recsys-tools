@@ -1,17 +1,20 @@
+import logging
+
 import numpy as np
 from lightfm import LightFM
 import lightfm.lightfm
 
 from ml_recsys_tools.recommenders.factorization_base import BaseFactorizationRecommender
-from ml_recsys_tools.utils.instrumentation import simple_logger, log_errors
+from ml_recsys_tools.utils.instrumentation import log_errors
 from ml_recsys_tools.utils.parallelism import N_CPUS
 
+logger = logging.getLogger(__name__)
 
 # monkey patch print function
 @log_errors()
 def _epoch_logger(s, print_each_n=20):
     if not int(s.replace('Epoch ', '')) % print_each_n:
-        simple_logger.info(s)
+        logger.info(s)
 
 lightfm.lightfm.print = _epoch_logger
 
@@ -66,7 +69,7 @@ class LightFMRecommender(BaseFactorizationRecommender):
 
     def _initialise_from_model(self, train_obs):
         # fit initialiser model (this is done here to prevent any data leaks from passing fitted models)
-        simple_logger.info('Training %s model to initialise LightFM model.' % str(self.initialiser_model))
+        logger.info('Training %s model to initialise LightFM model.' % str(self.initialiser_model))
         self.initialiser_model.fit(train_obs)
         self._reuse_data(self.initialiser_model)
         # have the internals initialised
@@ -88,13 +91,13 @@ class LightFMRecommender(BaseFactorizationRecommender):
                 create_sparse_features_mat(
                     items_encoder=self.sparse_mat_builder.iid_encoder,
                     **self.external_features_params)
-            simple_logger.info('External item features matrix: %s' %
+            logger.info('External item features matrix: %s' %
                             str(self.external_features_mat.shape))
 
         # add external features if specified
         self.fit_params['item_features'] = self.external_features_mat
         if self.external_features_mat is not None:
-            simple_logger.info('Fitting using external features mat: %s'
+            logger.info('Fitting using external features mat: %s'
                                % str(self.external_features_mat.shape))
 
     def fit(self, train_obs, **fit_params):
@@ -123,7 +126,7 @@ class LightFMRecommender(BaseFactorizationRecommender):
 
             self._set_fit_params(fit_params)
 
-            simple_logger.info('Fitting batch %d (%d interactions)' % (i, len(df)))
+            logger.info('Fitting batch %d (%d interactions)' % (i, len(df)))
             self.model.fit_partial(batch_train_mat, **self.fit_params)
 
     def _set_epochs(self, epochs):
@@ -154,7 +157,7 @@ class LightFMRecommender(BaseFactorizationRecommender):
 
         elif (mode == 'no_features') and (self.fit_params['item_features'] is not None):
 
-            simple_logger.info('LightFM recommender: get_similar_items: "no_features" mode '
+            logger.info('LightFM recommender: get_similar_items: "no_features" mode '
                                'assumes ID mat was added and is the last part of the feature matrix.')
 
             assert self.model.item_embeddings.shape[0] > n_items, \

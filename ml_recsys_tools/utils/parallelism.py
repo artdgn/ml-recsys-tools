@@ -1,3 +1,4 @@
+import logging
 from multiprocessing import Process, Queue
 
 import numpy as np
@@ -6,10 +7,10 @@ from itertools import islice
 import multiprocessing
 from multiprocessing.pool import ThreadPool, Pool
 
-from ml_recsys_tools.utils.logger import simple_logger as logger
-
 
 N_CPUS = multiprocessing.cpu_count()
+
+logger = logging.getLogger(__name__)
 
 
 def batch_generator(iterable, n=1):

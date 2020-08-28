@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from lightfm.evaluation import precision_at_k, recall_at_k, auc_score, reciprocal_rank
 
-from ml_recsys_tools.utils.instrumentation import LogCallsTimeAndOutput
+from ml_recsys_tools.utils.instrumentation import LogLongCallsMeta
 from ml_recsys_tools.utils.parallelism import N_CPUS
 
 
@@ -40,10 +40,9 @@ def mean_scores_report_on_ranks(ranks_list, datasets, dataset_names, k=10):
     return pd.DataFrame(data=data, index=dataset_names), full_reports
 
 
-class RanksScorer(LogCallsTimeAndOutput):
+class RanksScorer(LogLongCallsMeta):
 
-    def __init__(self, ranks_mat, test_mat, train_mat=None, k=10, verbose=True):
-        super().__init__(verbose=verbose)
+    def __init__(self, ranks_mat, test_mat, train_mat=None, k=10):
         self.ranks_mat = ranks_mat
         self.test_mat = test_mat
         self.train_mat = train_mat
