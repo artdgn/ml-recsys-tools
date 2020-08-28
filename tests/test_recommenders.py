@@ -1,3 +1,4 @@
+import logging
 import sys
 import pandas as pd
 import numpy as np
@@ -8,7 +9,6 @@ import time
 from ml_recsys_tools.data_handlers.interactions_with_features import ObsWithFeatures
 from ml_recsys_tools.datasets.prep_movielense_data import get_and_prep_data
 
-from ml_recsys_tools.utils.logger import simple_logger as logger
 from ml_recsys_tools.utils.instrumentation import pickle_size_mb
 
 from ml_recsys_tools.utils.testing import TestCaseWithState
@@ -16,6 +16,8 @@ from tests.test_movielens_data import movielens_dir
 
 rating_csv_path, users_csv_path, movies_csv_path = get_and_prep_data(movielens_dir)
 
+
+logger = logging.getLogger(__name__)
 
 DEBUG_ON = getattr(sys, 'gettrace', None) is not None
 

@@ -1,19 +1,14 @@
+import logging
 import warnings
-from types import SimpleNamespace
 
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 import copy
 import scipy.sparse as sp
 
-from multiprocessing.pool import Pool
-
 from sklearn.model_selection import train_test_split
 
-from ml_recsys_tools.utils.parallelism import batch_generator, N_CPUS
-from ml_recsys_tools.utils.instrumentation import LogCallsTimeAndOutput
-from ml_recsys_tools.utils.logger import simple_logger as logger
+from ml_recsys_tools.utils.instrumentation import LogLongCallsMeta
 from ml_recsys_tools.utils.pandas_utils import console_settings
 from ml_recsys_tools.utils.sklearn_extenstions import PDLabelEncoder
 
@@ -21,12 +16,14 @@ console_settings()
 
 RANDOM_STATE = 42
 
+logger = logging.getLogger(__name__)
 
-class ObservationsDF(LogCallsTimeAndOutput):
+
+class ObservationsDF(LogLongCallsMeta):
 
     def __init__(self, df_obs=None, uid_col='userid', iid_col='itemid', timestamp_col=None,
-                 rating_col='rating', verbose=True, **kwargs):
-        super().__init__(verbose=verbose, **kwargs)
+                 rating_col='rating', **kwargs):
+        super().__init__(**kwargs)
         self.df_obs = df_obs
         self.uid_col = uid_col
         self.iid_col = iid_col
@@ -71,7 +68,7 @@ class ObservationsDF(LogCallsTimeAndOutput):
         dups = self.df_obs.duplicated([self.uid_col, self.iid_col])
         if dups.sum():
             logger.warning('ObservationsDF: Dropping %s duplicate interactions.'
-                        % str(dups.sum()))
+                           % str(dups.sum()))
             self.df_obs = self.df_obs[~dups]
 
     def users_history_counts(self):
@@ -116,7 +113,7 @@ class ObservationsDF(LogCallsTimeAndOutput):
         """
         if method == 'top' or min_user_hist or min_item_hist:
             items_per_user = self.users_history_counts()
-            users_per_items= self.items_history_counts()
+            users_per_items = self.items_history_counts()
 
             if min_user_hist:
                 items_per_user = items_per_user[items_per_user.values >= min_user_hist]
@@ -192,9 +189,9 @@ class ObservationsDF(LogCallsTimeAndOutput):
             other_df_obs[[self.iid_col, self.uid_col, self.rating_col]],
             on=[self.iid_col, self.uid_col], how='left')
 
-        if mode=='remove':
+        if mode == 'remove':
             filt_mask = df_filtered[self.rating_col + '_y'].isnull()
-        elif mode=='keep':
+        elif mode == 'keep':
             filt_mask = df_filtered[self.rating_col + '_y'].notnull()
         else:
             raise ValueError(f'unknown value for mode:{mode}')
@@ -260,7 +257,7 @@ class ObservationsDF(LogCallsTimeAndOutput):
 
         elif time_split_column:
             self.df_obs = self.df_obs.sort_values(time_split_column)
-            split_ind = int((len(self.df_obs)-1) * ratio)
+            split_ind = int((len(self.df_obs) - 1) * ratio)
             return self.df_obs.iloc[:-split_ind].copy(), self.df_obs.iloc[-split_ind:].copy()
 
         else:
@@ -297,7 +294,8 @@ class ObservationsDF(LogCallsTimeAndOutput):
 
     split_by_time_col = split_train_test_by_time  # backwards compat
 
-    def split_train_test(self, ratio=0.2, users_ratio=1.0, time_split_column=None, random_state=None):
+    def split_train_test(self, ratio=0.2, users_ratio=1.0, time_split_column=None,
+                         random_state=None):
         """
         splits the object into train and test objects using the arguments to choose the method.
         If time_split_column is provided: the split is done using that column and provided ratio.
@@ -339,7 +337,8 @@ class ObservationsDF(LogCallsTimeAndOutput):
             yield batch_obs.df_obs
 
 
-def train_test_split_by_col(df, col_ratio=0.2, test_ratio=0.2, col_name='userid', random_state=None):
+def train_test_split_by_col(df, col_ratio=0.2, test_ratio=0.2, col_name='userid',
+                            random_state=None):
     # split field unique values
     vals_train, vals_test = train_test_split(
         df[col_name].unique(), test_size=col_ratio, random_state=random_state)
@@ -358,8 +357,7 @@ def train_test_split_by_col(df, col_ratio=0.2, test_ratio=0.2, col_name='userid'
     return df_train, df_test
 
 
-class InteractionMatrixBuilder(LogCallsTimeAndOutput):
-
+class InteractionMatrixBuilder(LogLongCallsMeta):
     # this filter is due to this issue, can be removed with next version of sklearn (should be fixed)
     # https://stackoverflow.com/questions/49545947/sklearn-deprecationwarning-truth-value-of-an-array
     warnings.filterwarnings(message="The truth value of an empty array is ambiguous. "
@@ -367,9 +365,7 @@ class InteractionMatrixBuilder(LogCallsTimeAndOutput):
                                     "Use `array.size > 0` to check that an array is not empty.",
                             action='ignore', category=DeprecationWarning)
 
-    def __init__(self, source_df, users_col='userid', items_col='adid', rating_col='rating', verbose=True):
-        super().__init__(verbose=verbose)
-
+    def __init__(self, source_df, users_col='userid', items_col='adid', rating_col='rating'):
         self.uid_source_col = users_col
         self.iid_source_col = items_col
         self.rating_source_col = rating_col
@@ -393,8 +389,10 @@ class InteractionMatrixBuilder(LogCallsTimeAndOutput):
 
     def add_encoded_cols(self, df):
         df = df.assign(
-            **{self.uid_col: self.uid_encoder.transform(df[self.uid_source_col].values.astype(str)),
-               self.iid_col: self.iid_encoder.transform(df[self.iid_source_col].values.astype(str))})
+            **{self.uid_col: self.uid_encoder.transform(
+                df[self.uid_source_col].values.astype(str)),
+               self.iid_col: self.iid_encoder.transform(
+                   df[self.iid_source_col].values.astype(str))})
         return df
 
     def build_sparse_interaction_matrix(self, df):

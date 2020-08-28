@@ -1,10 +1,11 @@
+import logging
+
 from implicit.als import AlternatingLeastSquares
-# from implicit.bpr import BayesianPersonalizedRanking
 from implicit.nearest_neighbours import bm25_weight
 
 from ml_recsys_tools.recommenders.factorization_base import BaseFactorizationRecommender
-from ml_recsys_tools.utils.instrumentation import simple_logger
 
+logger = logging.getLogger(__name__)
 
 class ALSRecommender(BaseFactorizationRecommender):
 
@@ -73,7 +74,7 @@ class ALSRecommender(BaseFactorizationRecommender):
 
             self._set_implib_train_mat(batch_train_mat)
 
-            simple_logger.info('Fitting batch %d (%d interactions)' % (i, len(df)))
+            logger.info('Fitting batch %d (%d interactions)' % (i, len(df)))
             self.model.fit(self.implib_train_mat)
 
     def _set_epochs(self, epochs):
