@@ -77,7 +77,6 @@ class RanksScorer(LogLongCallsMeta):
             ('precision@%d' % self.k, self.precision_at_k),
             ('recall@%d' % self.k, self.recall_at_k),
             ('n-recall@%d' % self.k, self.n_recall_at_k),
-            # ('n-i-gini@%d' % self.k, self.n_i_gini_at_k),
             ('n-coverage@%d' % self.k, self.n_coverage_at_k),
         ])
 
@@ -116,10 +115,6 @@ class RanksScorer(LogLongCallsMeta):
 
     def recall_at_k(self):
         return recall_at_k_on_ranks(**self._ranks_kwargs(), k=self.k)
-
-    def n_i_gini_at_k(self):
-        return (1 - gini_coefficient_at_k(**self._ranks_kwargs(), k=self.k)) / \
-               (1 - gini_coefficient_at_k(**self._best_ranks_kwargs(), k=self.k))
 
     def n_coverage_at_k(self):
         return coverage_at_k(**self._ranks_kwargs(), k=self.k) / \

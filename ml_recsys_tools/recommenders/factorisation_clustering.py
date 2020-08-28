@@ -2,7 +2,7 @@ from multiprocessing.pool import ThreadPool
 
 import numpy as np
 import pandas as pd
-from sklearn.cluster import MiniBatchKMeans, KMeans
+from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics.pairwise import cosine_distances
 from sklearn.preprocessing import normalize
 
