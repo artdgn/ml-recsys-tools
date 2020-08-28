@@ -1,3 +1,5 @@
+![CI](https://github.com/artdgn/ml-recsys-tools/workflows/CI/badge.svg)
+
 # ml-recsys-tools
 
 ----
