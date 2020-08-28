@@ -22,6 +22,8 @@ install: .venv
 tests:
 	pytest
 
+# https://packaging.python.org/tutorials/packaging-projects/
 pypi:
 	$(VENV_ACTIVATE); \
+	python3 -m pip install -U setuptools wheel twine; \
 	rm -rf dist && python3 setup.py sdist bdist_wheel && twine upload dist/*

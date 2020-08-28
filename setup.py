@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 from os import path
 
-version = '0.9'
+version = '0.9.0'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -27,8 +27,5 @@ setup(
     ],
     keywords='recommendations machine learning',
     packages=find_packages(exclude=['tests', 'examples']),
-    install_requires=['requests', 'numpy', 'scipy', 'pandas',
-                      'scikit_learn', 'lightfm', 'psutil', 'matplotlib'],
+    install_requires=open('requirements.in').read().split('\n'),
 )
-
-## rm -rf dist && python3 setup.py sdist bdist_wheel && twine upload dist/*
