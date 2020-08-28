@@ -1,26 +1,25 @@
-![CI](https://github.com/artdgn/ml-recsys-tools/workflows/CI/badge.svg)
+![CI](https://github.com/artdgn/ml-recsys-tools/workflows/CI/badge.svg) ![PyPI](https://img.shields.io/pypi/v/ml-recsys-tools?color=blue)
 
 # ml-recsys-tools
 
 ----
 
-### This is an updated version of the stale ml-recsys-tools source repo
+## This is an updated version of the [stale ml-recsys-tools source repo](https://github.com/DomainGroupOSS/ml-recsys-tools)
 
 -----
 
 
-#### Open source repo for various tools for recommender systems development work.
+## Open source repo for various tools for recommender systems development work.
+Main purpose is to provide a single wrapper for various recommender packages to train, tune, evaluate and get data in and recommendations / similarities out.
 
-#### Main purpose is to provide a single wrapper for various recommender packages to train, tune, evaluate and get data in and recommendations / similarities out.
+## Installation:
 
-#### Installation:
-
-Pip: 
-* `pip install git+https://github.com/artdgn/ml-recsys-tools@master#egg=ml_recsys_tools` 
-* As dependency (add to `requirements.txt`): add line `git+https://github.com/artdgn/ml-recsys-tools@master#egg=ml_recsys_tools`
+Pip:
+* PyPi: `pip install ml-recsys-tools` 
+* Github `master`: `pip install git+https://github.com/artdgn/ml-recsys-tools@master#egg=ml_recsys_tools`
 
 
-#### Basic example:
+## Basic usage:
 
 ```python
 # dataset: download and prepare dataframes
@@ -51,21 +50,29 @@ print(recs.sample(5))
 simils = lfm_rec.get_similar_items(lfm_rec.all_items, n_simil=5)
 print(simils.sample(10))
 ```
-    
+   
+## Additional examples in the `examples/` folder:
+ - [Cosine similarity](https://github.com/artdgn/ml-recsys-tools/blob/master/examples/cosine_similarity.py) 
+ - [Ensembles](https://github.com/artdgn/ml-recsys-tools/blob/master/examples/ensembles.py) 
+ - [Hybrid features for LightFM](https://github.com/artdgn/ml-recsys-tools/blob/master/examples/lightfm_hybrid_features.py) 
+ - [Additional recommenders](https://github.com/artdgn/ml-recsys-tools/blob/master/examples/additional_recommenders.py) 
+ - [Using multiple testsets](https://github.com/artdgn/ml-recsys-tools/blob/master/examples/multiple_testsets.py)
+ and [Evaluation](https://github.com/artdgn/ml-recsys-tools/blob/master/examples/evaluation.py)
 
 
 ## Recommender models and tools:
 
 * #### [LightFM](https://github.com/lyst/lightfm) package based recommender.
 * #### [Implicit](https://github.com/benfred/implicit) package based ALS recommender.
-* #### Serving / Tuning / Evaluation features added for most recommenders:
+* #### Evaluation features added for most recommenders:
     * Dataframes for all inputs and outputs
         * adding external features (for LightFM hybrid mode)
         * fast batched methods for:
             * user recommendation sampling
             * similar items samplilng with different similarity measures
             * similar users sampling
-            * evaluation by sampling and ranking      
+            * evaluation by sampling and ranking
+            * dense user x item recommendation and item x item similarity      
                   
 * #### Additional recommender models:
     * ##### Similarity based:
