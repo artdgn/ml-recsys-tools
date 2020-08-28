@@ -1,3 +1,4 @@
+import logging
 import os
 from abc import ABC, abstractmethod
 from copy import deepcopy
@@ -8,8 +9,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import rankdata
 
-from ml_recsys_tools.utils.logger import simple_logger as logger
-from ml_recsys_tools.utils.instrumentation import LogCallsTimeAndOutput
+from ml_recsys_tools.utils.instrumentation import LogLongCallsMeta
 from ml_recsys_tools.utils.parallelism import map_batches_multiproc
 from ml_recsys_tools.utils.similarity import top_N_sorted
 
@@ -18,15 +18,16 @@ from ml_recsys_tools.data_handlers.interactions_with_features import ItemsHandle
 
 from ml_recsys_tools.evaluation.ranks_scoring import mean_scores_report_on_ranks
 
+logger = logging.getLogger(__name__)
 
-class BaseDFRecommender(ABC, LogCallsTimeAndOutput):
+
+class BaseDFRecommender(ABC, LogLongCallsMeta):
     default_model_params = {}
     default_fit_params = {}
 
     def __init__(self, user_col='userid', item_col='itemid',
                  rating_col='rating', prediction_col='prediction',
-                 model_params=None, fit_params=None, verbose=True, **kwargs):
-        super().__init__(verbose=verbose)
+                 model_params=None, fit_params=None, **kwargs):
         self._user_col = user_col
         self._item_col = item_col
         self._item_col_simil = item_col + '_source'

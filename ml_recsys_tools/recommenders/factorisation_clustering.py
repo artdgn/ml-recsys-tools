@@ -8,12 +8,12 @@ from sklearn.preprocessing import normalize
 
 from ml_recsys_tools.data_handlers.interaction_handlers_base import RANDOM_STATE
 from ml_recsys_tools.recommenders.factorization_base import BaseFactorizationRecommender
-from ml_recsys_tools.utils.instrumentation import LogCallsTimeAndOutput
+from ml_recsys_tools.utils.instrumentation import LogLongCallsMeta
 from ml_recsys_tools.utils.parallelism import N_CPUS
 from ml_recsys_tools.utils.similarity import top_N_sorted
 
 
-class FactorClusterMapper(LogCallsTimeAndOutput):
+class FactorClusterMapper(LogLongCallsMeta):
 
     def __init__(self, factoriser, obs_handler=None, n_clusters=20, **kwargs):
         super().__init__(**kwargs)

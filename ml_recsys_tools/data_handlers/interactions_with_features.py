@@ -1,4 +1,5 @@
 import copy
+import logging
 
 import numpy as np
 import pandas as pd
@@ -11,11 +12,12 @@ from sklearn_pandas import DataFrameMapper
 from ml_recsys_tools.utils.sklearn_extenstions import NumericBinningBinarizer
 
 from ml_recsys_tools.data_handlers.interaction_handlers_base import ObservationsDF, RANDOM_STATE
-from ml_recsys_tools.utils.instrumentation import LogCallsTimeAndOutput
-from ml_recsys_tools.utils.logger import simple_logger as logger
+from ml_recsys_tools.utils.instrumentation import LogLongCallsMeta
+
+logger = logging.getLogger(__name__)
 
 
-class ExternalFeaturesDF(LogCallsTimeAndOutput):
+class ExternalFeaturesDF(LogLongCallsMeta):
     """
     handles external items features and feature engineering
     """
@@ -23,8 +25,7 @@ class ExternalFeaturesDF(LogCallsTimeAndOutput):
     _numeric_duplicate_suffix = '_num'
     _item_ind_col = '_item_ind'
 
-    def __init__(self, feat_df, id_col, num_cols=None, cat_cols=None, bin_cols=None, verbose=True):
-        super().__init__(verbose=verbose)
+    def __init__(self, feat_df, id_col, num_cols=None, cat_cols=None, bin_cols=None):
         self.feat_df = feat_df.copy()
         self.id_col = id_col
         self.num_cols = num_cols if num_cols is not None else []
@@ -235,7 +236,7 @@ class ExternalFeaturesDF(LogCallsTimeAndOutput):
         return feat_mapper
 
 
-class ItemsHandler(LogCallsTimeAndOutput):
+class ItemsHandler(LogLongCallsMeta):
 
     def __init__(self, df_items, item_id_col='item_id', **kwargs):
         super().__init__(**kwargs)

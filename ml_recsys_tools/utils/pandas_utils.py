@@ -1,7 +1,4 @@
 import pandas as pd
-from io import StringIO
-from sklearn.metrics.classification import classification_report
-import warnings
 from functools import partial
 
 from ml_recsys_tools.utils.instrumentation import log_time_and_shape
@@ -48,12 +45,6 @@ def hist_by_groups(groups):
         g[1].hist(label=g[0], alpha=1.0, ax=ax[i])
         ax[i].legend()
     return ax
-
-
-def classification_report_df(y_true, y_pred):
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        return pd.read_csv(StringIO(classification_report(y_true, y_pred)), sep=r"[ \t]{2,}")
 
 
 # slow
